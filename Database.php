@@ -213,7 +213,7 @@ class Database
     return $this;
   }
 
-  public function load()
+  public function load(?int $mode = null, ?array $options = null)
   {
     $query = $this->get_query();
 
@@ -223,14 +223,19 @@ class Database
 
     $this->query_status = $status;
 
-    if ($status === false)
+    if ($status === false) {
       $this->error_info = $this->stmt->errorInfo();
+    }
 
-    $result = $this->stmt->fetchAll(\PDO::FETCH_CLASS);
+    // get mode
+    $mode = $mode ?? \PDO::FETCH_CLASS;
 
-    if ($this->return_results)
-      return $result;
-    else
-      return $this->query_status;
+    $options = is_null($options) ? array() : $options;
+
+    $result = $this->stmt->fetchAll($mode, ...$options);
+
+    return $this->return_results === true
+      ? $result
+      : $this->query_status;
   }
 }

@@ -40,6 +40,9 @@ class Database
   /** @var array $where_clausule_parameters the query where clausule parameters */
   private $where_clausule_parameters;
 
+  /** @var int $limit_clausule */
+  private $limit_clausule;
+
   /** @var bool $query_status the query status */
   private $query_status;
 
@@ -69,21 +72,17 @@ class Database
 
   private function get_query(): string
   {
-    $where = $this->handle_where_clausule();
+    $this->handle_where_clausule();
+    $this->handle_limit_clausule();
 
-    $query = $this->query;
-
-    if (is_null($where) === false)
-      $query .= " WHERE {$where}";
-
-    return $query;
+    return $this->query;
   }
 
   /** Handle where clausules and returns your code */
-  private function handle_where_clausule(): ?string
+  private function handle_where_clausule(): void
   {
-    if (!isset($this->where_clausule_parameters))
-      return null;
+    if (isset($this->where_clausule_parameters) === false)
+      return;
 
     $mode = $this->where_clausule_mode;
     $params = $this->where_clausule_parameters;
@@ -105,7 +104,24 @@ class Database
       array_push($where_items, $str);
     }
 
-    return join(" {$mode} ", $where_items);
+    $where = join(" {$mode} ", $where_items);
+
+    $this->query .= " WHERE {$where}";
+  }
+
+  private function handle_limit_clausule(): void
+  {
+    if (isset($this->limit_clausule) === false)
+      return;
+
+    $limit = $this->limit_clausule[0];
+
+    // verify if the limit start was defined
+    if (is_null($this->limit_clausule[1]) === false) {
+      $limit = "{$this->limit_clausule[1]}, {$this->limit_clausule[0]}";
+    }
+
+    $this->query .= " LIMIT {$limit}";
   }
 
   private function bind_values(): void
@@ -148,6 +164,13 @@ class Database
   {
     $this->where_clausule_mode = $mode;
     $this->where_clausule_parameters = $where_parameters;
+    return $this;
+  }
+
+  /** Define the query limit */
+  public function limit(int $limit, ?int $start = null): \Database
+  {
+    $this->limit_clausule = array($limit, $start);
     return $this;
   }
 

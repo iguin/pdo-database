@@ -10,11 +10,17 @@ $db
   ->where(
     'AND',
     array(
-      'relation' => '=',
-      'field' => 'cpf',
-      'value' => '48566870697',
+      'relation'  => 'LIKE',
+      'field'     => 'name',
+      'value'     => 'ad'
     ),
-  );
+    array(
+      'relation'  => '>',
+      'field'     => 'registration',
+      'value'     => 300
+    ),
+  )
+  ->limit(2, 1);
 
 $result = $db->load();
 

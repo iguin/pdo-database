@@ -20,7 +20,8 @@ $db
       'value'     => 300
     ),
   )
-  ->limit(2, 1);
+  ->limit(2, 1)
+  ->order_by('name', 'ASC');
 
 $result = $db->load();
 

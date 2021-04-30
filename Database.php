@@ -40,8 +40,11 @@ class Database
   /** @var array $where_clausule_parameters the query where clausule parameters */
   private $where_clausule_parameters;
 
-  /** @var int $limit_clausule */
+  /** @var array $limit_clausule */
   private $limit_clausule;
+
+  /** @var array $order_by_clausule */
+  private $order_by_clausule;
 
   /** @var bool $query_status the query status */
   private $query_status;
@@ -72,14 +75,15 @@ class Database
 
   private function get_query(): string
   {
-    $this->handle_where_clausule();
-    $this->handle_limit_clausule();
+    $this->handle_where();
+    $this->handle_order_by();
+    $this->handle_limit();
 
     return $this->query;
   }
 
-  /** Handle where clausules and returns your code */
-  private function handle_where_clausule(): void
+  /** Handle where clausule */
+  private function handle_where(): void
   {
     if (isset($this->where_clausule_parameters) === false)
       return;
@@ -109,7 +113,8 @@ class Database
     $this->query .= " WHERE {$where}";
   }
 
-  private function handle_limit_clausule(): void
+  /** Handle limit clausule */
+  private function handle_limit(): void
   {
     if (isset($this->limit_clausule) === false)
       return;
@@ -124,6 +129,15 @@ class Database
     $this->query .= " LIMIT {$limit}";
   }
 
+  /** Handle limit clausule */
+  private function handle_order_by(): void
+  {
+    if (isset($this->order_by_clausule) === false)
+      return;
+
+    $this->query .= " ORDER BY " . join(" ", $this->order_by_clausule);
+  }
+
   private function bind_values(): void
   {
     if (!isset($this->parameters))
@@ -134,9 +148,7 @@ class Database
     }
   }
 
-  /** 
-   * Try to get databse connection
-   */
+  /**  Try to get the database connection */
   private function get_conn(): \PDO
   {
     try {
@@ -171,6 +183,13 @@ class Database
   public function limit(int $limit, ?int $start = null): \Database
   {
     $this->limit_clausule = array($limit, $start);
+    return $this;
+  }
+
+  /** Define the query order by clausule parameters */
+  public function order_by(string $fields, string $mode): \Database
+  {
+    $this->order_by_clausule = array($fields, $mode);
     return $this;
   }
 

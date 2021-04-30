@@ -238,4 +238,5 @@ class Database
       ? $result
       : $this->query_status;
   }
+  
 }

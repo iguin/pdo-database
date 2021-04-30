@@ -191,6 +191,26 @@ class Database
     return $this;
   }
 
+  /** Build a update query */
+  public function update(array $fields): \Database
+  {
+    $columns = array();
+
+    foreach ($fields as $column => $value) {
+      $column_id = ':' . uniqid("{$column}_");
+
+      $this->parameters[$column_id] = $value;
+
+      array_push($columns, "{$column} = {$column_id}");
+    }
+
+    $columns = join(', ', $columns);
+
+    $this->query = "UPDATE {$this->table} SET {$columns}";
+
+    return $this;
+  }
+
   /** Define the where clausule parameters */
   public function where(string $mode, ...$where_parameters): \Database
   {
@@ -238,5 +258,4 @@ class Database
       ? $result
       : $this->query_status;
   }
-  
 }

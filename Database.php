@@ -171,6 +171,26 @@ class Database
     return $this;
   }
 
+  /** Build a insert query */
+  public function insert(array $fields): \Database
+  {
+    $values = array();
+
+    foreach ($fields as $column => $value) {
+      $column_id = ':' . uniqid("{$column}_");
+
+      $this->parameters[$column_id] = $value;
+      array_push($values, $column_id);
+    }
+
+    $columns = join(', ', array_keys($fields));
+    $values = join(', ', $values);
+
+    $this->query = "INSERT INTO {$this->table} ($columns) VALUES ($values)";
+
+    return $this;
+  }
+
   /** Define the where clausule parameters */
   public function where(string $mode, ...$where_parameters): \Database
   {
@@ -208,6 +228,9 @@ class Database
 
     $result = $this->stmt->fetchAll(\PDO::FETCH_CLASS);
 
-    return $result;
+    if ($this->return_results)
+      return $result;
+    else
+      return $this->query_status;
   }
 }

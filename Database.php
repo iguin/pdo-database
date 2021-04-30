@@ -1,7 +1,5 @@
 <?php
 
-use function PHPSTORM_META\type;
-
 /**
  * 
  * MySQL database handle
@@ -10,11 +8,12 @@ use function PHPSTORM_META\type;
 
 class Database
 {
-  private const DB_HOST     = 'localhost';
-  private const DB_NAME     = 'gc_database';
-  private const DB_CHARSET  = 'utf8';
-  private const DB_USERNAME = 'root';
-  private const DB_PASSWORD = '';
+  private const DB_HOST           = 'localhost';
+  private const DB_NAME           = 'gc_database';
+  private const DB_CHARSET        = 'utf8';
+  private const DB_USERNAME       = 'root';
+  private const DB_PASSWORD       = '';
+  private const PAGINATION_LIMIT  = 3;
 
   /** @var \PDO $conn */
   private $conn;
@@ -52,6 +51,9 @@ class Database
   /** @var string $error_info the query error info */
   private $error_info;
 
+  /** @var object $pagination_infos */
+  private $pagination_infos;
+
   public function set_table(string $table): \Database
   {
     $this->table = $table;
@@ -68,6 +70,14 @@ class Database
     return isset($error_info) ? $this->error_info : null;
   }
 
+  private function set_pagination_info($key, $value): void
+  {
+    if (!isset($this->pagination_infos))
+      $this->pagination_infos = new \stdClass;
+
+    $this->pagination_infos->{$key} = $value;
+  }
+
   private function set_query(string $query): void
   {
     $this->query = $query;
@@ -82,11 +92,11 @@ class Database
     return $this->query;
   }
 
-  /** Handle where clausule */
-  private function handle_where(): void
+  /** Build a where clausule and return the code */
+  private function build_where_clausule(): ?string
   {
     if (isset($this->where_clausule_parameters) === false)
-      return;
+      return null;
 
     $mode = $this->where_clausule_mode;
     $params = $this->where_clausule_parameters;
@@ -110,7 +120,18 @@ class Database
 
     $where = join(" {$mode} ", $where_items);
 
-    $this->query .= " WHERE {$where}";
+    return " WHERE {$where}";
+  }
+
+  /** Handle where clausule */
+  private function handle_where(): void
+  {
+    $where = $this->build_where_clausule();
+
+    if (is_null($where) === true)
+      return;
+
+    $this->query .= $where;
   }
 
   /** Handle limit clausule */
@@ -226,6 +247,36 @@ class Database
     return $this;
   }
 
+  /** Get the total rows  */
+  private function get_total_rows(): int
+  {
+    $where = $this->build_where_clausule();
+
+    $query = "SELECT COUNT(`id`) as total FROM {$this->table}";
+
+    if (is_null($where) === false) {
+      $query .= $where;
+    }
+
+    $result = $this->load_raw_query($query);
+
+    return (count($result) === 0) ? 0 : intval($result[0]->total);
+  }
+
+  public function pagination(int $page): \Database
+  {
+    $real_page = $page <= 1 ? 0 : --$page;
+
+    $this->set_pagination_info('total_rows', $this->get_total_rows());
+    $this->set_pagination_info('total_pages', ceil($this->get_total_rows() / self::PAGINATION_LIMIT));
+
+    $start = $real_page * self::PAGINATION_LIMIT;
+
+    $this->limit(self::PAGINATION_LIMIT, $start);
+
+    return $this;
+  }
+
   /** Define the query order by clausule parameters */
   public function order_by(string $fields, string $mode): \Database
   {
@@ -233,12 +284,14 @@ class Database
     return $this;
   }
 
-  public function load(?int $mode = null, ?array $options = null)
+  /** Load a raw query */
+  private function load_raw_query(string $query, ?int $mode = null, ?array $options = null)
   {
-    $query = $this->get_query();
-
     $this->stmt = $this->get_conn()->prepare($query);
     $this->bind_values();
+
+    unset($this->parameters);
+
     $status = $this->stmt->execute();
 
     $this->query_status = $status;
@@ -253,6 +306,50 @@ class Database
     $options = is_null($options) ? array() : $options;
 
     $result = $this->stmt->fetchAll($mode, ...$options);
+
+    return $result;
+  }
+
+  private function build_fetch(): void
+  {
+    $query = $this->get_query();
+
+    $this->stmt = $this->get_conn()->prepare($query);
+    $this->bind_values();
+    $status = $this->stmt->execute();
+
+    $this->query_status = $status;
+
+    if ($status === false) {
+      $this->error_info = $this->stmt->errorInfo();
+    }
+  }
+
+  public function load(?int $mode = null, ?array $options = null)
+  {
+    $this->build_fetch();
+
+    // get mode
+    $mode = $mode ?? \PDO::FETCH_CLASS;
+    $options = is_null($options) ? array() : $options;
+
+    $result = $this->stmt->fetchAll($mode, ...$options);
+
+    return $this->return_results === true
+      ? $result
+      : $this->query_status;
+  }
+
+  public function load_single(?int $mode = null, ?array $options = null)
+  {
+    $this->build_fetch();
+
+    // get mode
+    $mode = $mode ?? \PDO::FETCH_ASSOC;
+    
+    $options = is_null($options) ? array() : $options;
+
+    $result = $this->stmt->fetch($mode);
 
     return $this->return_results === true
       ? $result

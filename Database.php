@@ -1,9 +1,10 @@
 <?php
 
 /**
- * 
  * MySQL database handle
  * 
+ * @author Igor Horta
+ * @see https://github.com/iguin/pdo-database 
  */
 
 class Database
@@ -30,76 +31,76 @@ class Database
   /** @var array $parameters the query parameters */
   private $parameters;
 
-  /** @var bool $return_results */
-  private $return_results = false;
+  /** @var bool $returnResults */
+  private $returnResults = false;
 
-  /** @var array $where_clausule_mode the query where clausule mode */
-  private $where_clausule_mode;
+  /** @var array $whereClausuleMode the query where clausule mode */
+  private $whereClausuleMode;
 
-  /** @var array $where_clausule_parameters the query where clausule parameters */
-  private $where_clausule_parameters;
+  /** @var array $whereClausuleParameters the query where clausule parameters */
+  private $whereClausuleParameters;
 
-  /** @var array $limit_clausule */
-  private $limit_clausule;
+  /** @var array $limitClausule */
+  private $limitClausule;
 
-  /** @var array $order_by_clausule */
-  private $order_by_clausule;
+  /** @var array $orderByClausule */
+  private $orderByClausule;
 
-  /** @var bool $query_status the query status */
-  private $query_status;
+  /** @var bool $queryStatus the query status */
+  private $queryStatus;
 
-  /** @var string $error_info the query error info */
-  private $error_info;
+  /** @var string $errorInfo the query error info */
+  private $errorInfo;
 
-  /** @var object $pagination_infos */
-  private $pagination_infos;
+  /** @var object $paginationInfos */
+  private $paginationInfos;
 
-  public function set_table(string $table): \Database
+  public function setTable(string $table): \Database
   {
     $this->table = $table;
     return $this;
   }
 
-  public function get_query_status(): bool
+  public function getQueryStatus(): bool
   {
-    return isset($this->query_status) ? $this->query_status : false;
+    return isset($this->queryStatus) ? $this->queryStatus : false;
   }
 
-  public function get_error_info(): ?string
+  public function getErrorInfo(): ?string
   {
-    return isset($error_info) ? $this->error_info : null;
+    return isset($errorInfo) ? $this->errorInfo : null;
   }
 
-  private function set_pagination_info($key, $value): void
+  private function setPaginationInfo($key, $value): void
   {
-    if (!isset($this->pagination_infos))
-      $this->pagination_infos = new \stdClass;
+    if (!isset($this->paginationInfos))
+      $this->paginationInfos = new \stdClass;
 
-    $this->pagination_infos->{$key} = $value;
+    $this->paginationInfos->{$key} = $value;
   }
 
-  private function set_query(string $query): void
+  private function setQuery(string $query): void
   {
     $this->query = $query;
   }
 
-  private function get_query(): string
+  private function getQuery(): string
   {
-    $this->handle_where();
-    $this->handle_order_by();
-    $this->handle_limit();
+    $this->handleWhere();
+    $this->handleOrderBy();
+    $this->handleLimit();
 
     return $this->query;
   }
 
   /** Build a where clausule and return the code */
-  private function build_where_clausule(): ?string
+  private function buildWhereClausule(): ?string
   {
-    if (isset($this->where_clausule_parameters) === false)
+    if (isset($this->whereClausuleParameters) === false)
       return null;
 
-    $mode = $this->where_clausule_mode;
-    $params = $this->where_clausule_parameters;
+    $mode = $this->whereClausuleMode;
+    $params = $this->whereClausuleParameters;
     $where_items = array();
 
     foreach ($params as $item) {
@@ -124,9 +125,9 @@ class Database
   }
 
   /** Handle where clausule */
-  private function handle_where(): void
+  private function handleWhere(): void
   {
-    $where = $this->build_where_clausule();
+    $where = $this->buildWhereClausule();
 
     if (is_null($where) === true)
       return;
@@ -135,31 +136,31 @@ class Database
   }
 
   /** Handle limit clausule */
-  private function handle_limit(): void
+  private function handleLimit(): void
   {
-    if (isset($this->limit_clausule) === false)
+    if (isset($this->limitClausule) === false)
       return;
 
-    $limit = $this->limit_clausule[0];
+    $limit = $this->limitClausule[0];
 
     // verify if the limit start was defined
-    if (is_null($this->limit_clausule[1]) === false) {
-      $limit = "{$this->limit_clausule[1]}, {$this->limit_clausule[0]}";
+    if (is_null($this->limitClausule[1]) === false) {
+      $limit = "{$this->limitClausule[1]}, {$this->limitClausule[0]}";
     }
 
     $this->query .= " LIMIT {$limit}";
   }
 
   /** Handle limit clausule */
-  private function handle_order_by(): void
+  private function handleOrderBy(): void
   {
-    if (isset($this->order_by_clausule) === false)
+    if (isset($this->orderByClausule) === false)
       return;
 
-    $this->query .= " ORDER BY " . join(" ", $this->order_by_clausule);
+    $this->query .= " ORDER BY " . join(" ", $this->orderByClausule);
   }
 
-  private function bind_values(): void
+  private function bindValues(): void
   {
     if (!isset($this->parameters))
       return;
@@ -170,7 +171,7 @@ class Database
   }
 
   /**  Try to get the database connection */
-  private function get_conn(): \PDO
+  private function getConn(): \PDO
   {
     try {
       $dsn = 'mysql:host=' . self::DB_HOST . ';dbname=' . self::DB_NAME . ';charset=' . self::DB_CHARSET;
@@ -186,8 +187,8 @@ class Database
   public function select(array $fields): \Database
   {
     $query = "SELECT " . join(', ', $fields) . " FROM {$this->table}";
-    $this->set_query($query);
-    $this->return_results = true;
+    $this->setQuery($query);
+    $this->returnResults = true;
 
     return $this;
   }
@@ -198,10 +199,10 @@ class Database
     $values = array();
 
     foreach ($fields as $column => $value) {
-      $column_id = ':' . uniqid("{$column}_");
+      $columnId = ':' . uniqid("{$column}_");
 
-      $this->parameters[$column_id] = $value;
-      array_push($values, $column_id);
+      $this->parameters[$columnId] = $value;
+      array_push($values, $columnId);
     }
 
     $columns = join(', ', array_keys($fields));
@@ -218,11 +219,11 @@ class Database
     $columns = array();
 
     foreach ($fields as $column => $value) {
-      $column_id = ':' . uniqid("{$column}_");
+      $columnId = ':' . uniqid("{$column}_");
 
-      $this->parameters[$column_id] = $value;
+      $this->parameters[$columnId] = $value;
 
-      array_push($columns, "{$column} = {$column_id}");
+      array_push($columns, "{$column} = {$columnId}");
     }
 
     $columns = join(', ', $columns);
@@ -233,24 +234,24 @@ class Database
   }
 
   /** Define the where clausule parameters */
-  public function where(string $mode, ...$where_parameters): \Database
+  public function where(string $mode, ...$whereParameters): \Database
   {
-    $this->where_clausule_mode = $mode;
-    $this->where_clausule_parameters = $where_parameters;
+    $this->whereClausuleMode = $mode;
+    $this->whereClausuleParameters = $whereParameters;
     return $this;
   }
 
   /** Define the query limit */
   public function limit(int $limit, ?int $start = null): \Database
   {
-    $this->limit_clausule = array($limit, $start);
+    $this->limitClausule = array($limit, $start);
     return $this;
   }
 
   /** Get the total rows  */
-  private function get_total_rows(): int
+  private function getTotalRows(): int
   {
-    $where = $this->build_where_clausule();
+    $where = $this->buildWhereClausule();
 
     $query = "SELECT COUNT(`id`) as total FROM {$this->table}";
 
@@ -258,19 +259,19 @@ class Database
       $query .= $where;
     }
 
-    $result = $this->load_raw_query($query);
+    $result = $this->loadRawQuery($query);
 
     return (count($result) === 0) ? 0 : intval($result[0]->total);
   }
 
   public function pagination(int $page): \Database
   {
-    $real_page = $page <= 1 ? 0 : --$page;
+    $realPage = $page <= 1 ? 0 : --$page;
 
-    $this->set_pagination_info('total_rows', $this->get_total_rows());
-    $this->set_pagination_info('total_pages', ceil($this->get_total_rows() / self::PAGINATION_LIMIT));
+    $this->setPaginationInfo('total_rows', $this->getTotalRows());
+    $this->setPaginationInfo('total_pages', ceil($this->getTotalRows() / self::PAGINATION_LIMIT));
 
-    $start = $real_page * self::PAGINATION_LIMIT;
+    $start = $realPage * self::PAGINATION_LIMIT;
 
     $this->limit(self::PAGINATION_LIMIT, $start);
 
@@ -280,24 +281,24 @@ class Database
   /** Define the query order by clausule parameters */
   public function order_by(string $fields, string $mode): \Database
   {
-    $this->order_by_clausule = array($fields, $mode);
+    $this->orderByClausule = array($fields, $mode);
     return $this;
   }
 
   /** Load a raw query */
-  private function load_raw_query(string $query, ?int $mode = null, ?array $options = null)
+  private function loadRawQuery(string $query, ?int $mode = null, ?array $options = null)
   {
-    $this->stmt = $this->get_conn()->prepare($query);
-    $this->bind_values();
+    $this->stmt = $this->getConn()->prepare($query);
+    $this->bindValues();
 
     unset($this->parameters);
 
     $status = $this->stmt->execute();
 
-    $this->query_status = $status;
+    $this->queryStatus = $status;
 
     if ($status === false) {
-      $this->error_info = $this->stmt->errorInfo();
+      $this->errorInfo = $this->stmt->errorInfo();
     }
 
     // get mode
@@ -310,24 +311,24 @@ class Database
     return $result;
   }
 
-  private function build_fetch(): void
+  private function buildFetch(): void
   {
-    $query = $this->get_query();
+    $query = $this->getQuery();
 
-    $this->stmt = $this->get_conn()->prepare($query);
-    $this->bind_values();
+    $this->stmt = $this->getConn()->prepare($query);
+    $this->bindValues();
     $status = $this->stmt->execute();
 
-    $this->query_status = $status;
+    $this->queryStatus = $status;
 
     if ($status === false) {
-      $this->error_info = $this->stmt->errorInfo();
+      $this->errorInfo = $this->stmt->errorInfo();
     }
   }
 
   public function load(?int $mode = null, ?array $options = null)
   {
-    $this->build_fetch();
+    $this->buildFetch();
 
     // get mode
     $mode = $mode ?? \PDO::FETCH_CLASS;
@@ -335,24 +336,24 @@ class Database
 
     $result = $this->stmt->fetchAll($mode, ...$options);
 
-    return $this->return_results === true
+    return $this->returnResults === true
       ? $result
-      : $this->query_status;
+      : $this->queryStatus;
   }
 
-  public function load_single(?int $mode = null, ?array $options = null)
+  public function loadSingle(?int $mode = null, ?array $options = null)
   {
-    $this->build_fetch();
+    $this->buildFetch();
 
     // get mode
     $mode = $mode ?? \PDO::FETCH_ASSOC;
-    
+
     $options = is_null($options) ? array() : $options;
 
     $result = $this->stmt->fetch($mode);
 
-    return $this->return_results === true
+    return $this->returnResults === true
       ? $result
-      : $this->query_status;
+      : $this->queryStatus;
   }
 }
